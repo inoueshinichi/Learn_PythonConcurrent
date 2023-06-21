@@ -26,7 +26,7 @@ def importstr(module_str, from_=None):
         module_str, from_ = module_str.rsplit(':')
 
     module = __import__(module_str)
-    print('module: ', module)
+    # print('module: ', module)
 
     # start
     start_index = 1
