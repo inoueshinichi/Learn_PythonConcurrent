@@ -120,6 +120,8 @@ class ClassStyleThreadApp:
     def main(self):
         """アプリケーション
         """
+        log.info("Starting {}, {}".format(type(self).__name__, self.cli_args))
+
         t1 = MyThread("t1")
         t2 = MyThread("t2")
 
@@ -158,6 +160,8 @@ class CountingThreadApp:
     def main(self):
         """アプリケーション
         """
+        log.info("Starting {}, {}".format(type(self).__name__, self.cli_args))
+
 
         for i in range(1,4):
             t = threading.Thread(target=CountingThreadApp.run, args=("t{}".format(i),))
@@ -193,6 +197,10 @@ class DaemonThreadApp:
         print('1')
 
     def main(self):
+        """アプリケーション
+        """
+        log.info("Starting {}, {}".format(type(self).__name__, self.cli_args))
+
         for i in range(1,4):
             t = threading.Thread(target=DaemonThreadApp.run, args=("t{}".format(i),))
             t.setDaemon(True) # Daemon
@@ -203,4 +211,4 @@ class DaemonThreadApp:
 
 
 if __name__ == "__main__":
-    print("Don't execute this file directly.")
+    print(f"Don't execute {__file__} directly.")
