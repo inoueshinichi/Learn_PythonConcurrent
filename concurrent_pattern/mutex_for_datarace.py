@@ -87,5 +87,78 @@ class MutexForDataRaceApp:
 
         print('[primary-thread] 貯金額(with lock) balance=', MutexForDataRaceApp.balance)
 
+
+# RecursiveMutex
+class RecursiveMutexForDataRaceApp:
+    # 貯金額
+    balance : int = 0
+
+    # RecursiveMutex
+    rlock = threading.RLock()  # 再帰ロックをインスタンス化
+
+    def __init__(self, sys_argv : Optional[Any] = None):
+        if sys_argv is None:
+            sys_argv = sys.argv[1:]
+
+        parser : Any = argparse.ArgumentParser()
+
+        # 必要であれば, ここにアプリ引数を登録
+
+        self.cli_args = parser.parse_args(sys_argv)
+        self.time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
+
+    @classmethod
+    def add_it(cls, n: int) -> int:
+        # 再帰ロック
+        RecursiveMutexForDataRaceApp.rlock.acquire()
+        RecursiveMutexForDataRaceApp.balance = RecursiveMutexForDataRaceApp.balance + n
+        return RecursiveMutexForDataRaceApp.balance
+    
+    @classmethod
+    def sub_it(cls, n: int) -> int:
+        # 再帰ロック
+        RecursiveMutexForDataRaceApp.rlock.acquire()
+        RecursiveMutexForDataRaceApp.balance = RecursiveMutexForDataRaceApp.balance - n
+        return RecursiveMutexForDataRaceApp.balance
+
+    @classmethod
+    def change_it(cls, n : int):
+        # ロックを取得
+        RecursiveMutexForDataRaceApp.rlock.acquire()
+
+        # Critical Section [Start]-----
+        # 出金と入金でプラマイ0になるはず
+        RecursiveMutexForDataRaceApp.balance = RecursiveMutexForDataRaceApp.add_it(n)
+        RecursiveMutexForDataRaceApp.balance = RecursiveMutexForDataRaceApp.sub_it(n)
+        # Critical Section [End]-----
+
+        # 再帰的にロックを解放 (複数の再帰ロックを一括解放)
+        RecursiveMutexForDataRaceApp.rlock.release()
+
+    @classmethod
+    def run_thread(cls, n : int):
+        for _ in range(1000):
+            RecursiveMutexForDataRaceApp.change_it(n)
+
+
+    def main(self):
+        """アプリケーション
+        """
+        log.info("Starting {}, {}".format(type(self).__name__, self.cli_args))
+
+        t1 = threading.Thread(target=RecursiveMutexForDataRaceApp.run_thread, args=(5,))
+        t2 = threading.Thread(target=RecursiveMutexForDataRaceApp.run_thread, args=(8,))
+
+        t1.start()
+        t2.start()
+
+        t1.join()
+        t2.join()
+
+        print('[primary-thread] 貯金額(with recursive lock) balance=', RecursiveMutexForDataRaceApp.balance)
+
+
+
+
 if __name__ == "__main__":
     print(f"Don't execute {__file__} directly.")
