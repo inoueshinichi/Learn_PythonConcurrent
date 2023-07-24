@@ -48,7 +48,7 @@ import scipy as np
 
 from type_hint import *
 
-
+# キュー
 class ProcessConnectWithQueueApp: 
     def __init__(self, sys_argv : Optional[Any] = None):
         if sys_argv is None:
@@ -98,7 +98,7 @@ class ProcessConnectWithQueueApp:
         # prは無限ループなので、強制終了
         pr.terminate()
 
-
+# パイプ
 class ProcessConnectWithPipeApp:
     def __init__(self, sys_argv : Optional[Any] = None):
         if sys_argv is None:
@@ -127,7 +127,7 @@ class ProcessConnectWithPipeApp:
         print(parent_conn.recv())
         p.join()
 
-
+# 共有メモリ
 class ProcessConnectSharedMemoryApp:
     def __init__(self, sys_argv : Optional[Any] = None):
         if sys_argv is None:
@@ -162,7 +162,7 @@ class ProcessConnectSharedMemoryApp:
         print(num.value)
         print(arr[:])
 
-    
+# 名前付き共有メモリ
 class ProcessConnectWithNamedSharedMemoryApp:
 
     def __init__(self, sys_argv : Optional[Any] = None):
@@ -237,7 +237,7 @@ class ProcessConnectWithNamedSharedMemoryApp:
 
         print('[End] main process')
 
-# Topic形式
+# Topic形式 with Manager
 class ProcessConnectWithManagerApp:
 
     def __init__(self, sys_argv : Optional[Any] = None):
@@ -283,7 +283,7 @@ class ProcessConnectWithManagerApp:
             print(shared_dict)
             print(shared_list)
 
-
+# 共有メモリ with Manager
 class ProcessConnectWithSharedMemoryManagerApp:
 
     def __init__(self, sys_argv : Optional[Any] = None):
@@ -298,13 +298,36 @@ class ProcessConnectWithSharedMemoryManagerApp:
         self.time_str = datetime.datetime.now().strftime('%Y-%m-%d_%H.%M.%S')
 
     @classmethod
-    def other_process_exec(cls, d: dict, l: list, i: int):
+    def other_process_exec(cls, 
+                           sl, 
+                           start: int, 
+                           end: int, 
+                           v: int):
         print('[Start] other_process {}'.format(os.getpid()))
+        for i in range(start, end):
+            sl[i] = v
 
     def main(self):
         """アプリケーション
         """
         log.info("Starting {}, {}".format(type(self).__name__, self.cli_args))
+
+        # withで共有メモリマネージャーを起動する
+        # withを使わない場合はsmm.start()とsmm.shutdown()が必要
+        with SharedMemoryManager() as smm:
+            sl = smm.ShareableList(range(2000)) # マネージャーで共有リストを作成
+            # それぞれのプロセスで同時に共有リストを操作する
+            p1 = Process(target=ProcessConnectWithSharedMemoryManagerApp.other_process_exec, args=(sl, 0, 1000, 0))
+            p2 = Process(target=ProcessConnectWithSharedMemoryManagerApp.other_process_exec, args=(sl, 1000, 2000, 1))
+            p1.start()
+            p2.start()
+            p1.join()
+            p2.join()
+            total_result = sum(sl) # 共有リストslはwithを抜けた後に消滅する
+
+
+        print(total_result)
+
 
 if __name__ == "__main__":
     print(f"Don't execute {__file__} directly.")
